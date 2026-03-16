@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Missing XI — Daily Football Puzzle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green-pitch:#2d8c45;--green-dark:#1e6130;--white:#ffffff;--off-white:#f2f0eb;
+  --bg:#0f0f0f;--bg-card:#1a1a1a;--bg-elevated:#242424;
+  --border:rgba(255,255,255,0.08);--border-strong:rgba(255,255,255,0.18);
+  --text-primary:#f2f0eb;--text-muted:#888;--text-dim:#555;
+  --accent:#f5c518;--accent-dim:rgba(245,197,24,0.15);
+  --red:#e03c31;--green-result:#27ae60;--radius:10px;--radius-sm:6px;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text-primary);min-height:100vh;padding-bottom:3rem}
+
+/* HEADER */
+.site-header{background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.header-inner{max-width:560px;margin:0 auto;padding:.75rem 1.25rem;display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:'Bebas Neue',sans-serif;letter-spacing:.04em;line-height:1}
+.logo-main{font-size:22px;color:var(--text-primary)}
+.logo-xi{font-size:22px;color:var(--accent);margin-left:6px}
+.header-nav{display:flex;gap:4px}
+.nav-btn{background:none;border:1px solid transparent;border-radius:var(--radius-sm);color:var(--text-muted);font-family:'Inter',sans-serif;font-size:13px;font-weight:500;padding:5px 12px;cursor:pointer;transition:all .15s}
+.nav-btn:hover{color:var(--text-primary);border-color:var(--border-strong)}
+.nav-btn.active{color:var(--accent);border-color:var(--accent);background:var(--accent-dim)}
+
+/* VIEWS */
+.view{display:none;max-width:560px;margin:0 auto;padding:1.5rem 1.25rem 0}
+.view.active{display:block}
+
+/* PUZZLE META */
+.puzzle-meta{text-align:center;margin-bottom:1.1rem}
+.puzzle-badge{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(245,197,24,.3);border-radius:20px;padding:3px 12px;margin-bottom:8px}
+.puzzle-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.03em;color:var(--white);margin-bottom:4px}
+.puzzle-sub{font-size:13px;color:var(--text-muted);margin-bottom:3px}
+.puzzle-result{font-size:12px;color:var(--text-dim)}
+
+/* TEAM TABS */
+.team-tabs{display:flex;gap:8px;margin-bottom:1rem}
+.team-tab{flex:1;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-strong);background:var(--bg-card);color:var(--text-muted);font-family:'Inter',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s}
+.team-tab:hover{color:var(--text-primary)}
+.team-tab.active{color:var(--white);background:var(--bg-elevated);border-color:var(--border-strong);box-shadow:0 0 0 1px var(--border-strong)}
+
+/* PITCH */
+.pitch-container{border-radius:var(--radius);overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.6);margin-bottom:.6rem}
+.pitch{position:relative;width:100%;padding-bottom:130%;background:var(--green-pitch)}
+.pitch-svg{position:absolute;inset:0;width:100%;height:100%}
+.players-layer{position:absolute;inset:0}
+
+/* PLAYER DOT */
+.player-dot{position:absolute;transform:translate(-50%,-50%);text-align:center;width:52px}
+.player-dot .shirt{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;margin:0 auto 3px;border:2px solid rgba(255,255,255,.3);transition:all .2s}
+.player-dot .pname{font-size:9.5px;font-weight:500;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 6px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60px;display:block;margin:0 auto;line-height:1.2}
+.player-dot.missing .shirt{background:rgba(255,255,255,.08)!important;border:2px dashed rgba(255,255,255,.6);color:rgba(255,255,255,.7);font-size:18px;animation:pulse-missing 2s ease-in-out infinite;cursor:pointer}
+.player-dot.missing .pname{color:rgba(255,255,255,.5);font-style:italic}
+@keyframes pulse-missing{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.65;transform:scale(.92)}}
+.player-dot.correct .shirt{background:var(--green-result)!important;border-color:#2ecc71;animation:pop-correct .4s ease}
+@keyframes pop-correct{0%{transform:scale(.8)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.player-dot.wrong .shirt{background:var(--red)!important;border-color:#ff6b6b;animation:shake-wrong .4s ease}
+@keyframes shake-wrong{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}60%{transform:translateX(4px)}}
+
+/* FORMATION LABEL */
+.formation-label{text-align:center;font-size:12px;color:var(--text-dim);margin-bottom:1rem;letter-spacing:.05em}
+
+/* GUESS AREA */
+.guess-area{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1rem .75rem}
+.attempts-track{display:flex;gap:6px;justify-content:center;margin-bottom:.9rem}
+.attempt-pip{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--text-dim);background:transparent;transition:all .2s}
+.attempt-pip.correct{background:var(--green-result);border-color:var(--green-result)}
+.attempt-pip.wrong{background:var(--red);border-color:var(--red)}
+#result-banner{margin-bottom:.75rem;min-height:0}
+.result-msg{text-align:center;font-size:14px;font-weight:500;padding:10px 14px;border-radius:var(--radius-sm);line-height:1.4}
+.result-msg.success{background:rgba(39,174,96,.15);border:1px solid rgba(39,174,96,.3);color:#2ecc71}
+.result-msg.fail{background:rgba(224,60,49,.12);border:1px solid rgba(224,60,49,.3);color:#ff7878}
+.result-msg.try-again{background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.2);color:var(--accent)}
+.guess-input-row{display:flex;gap:8px;margin-bottom:.75rem}
+.guess-input-row input{flex:1;padding:11px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-strong);background:var(--bg-elevated);color:var(--text-primary);font-family:'Inter',sans-serif;font-size:15px;outline:none;transition:border-color .15s}
+.guess-input-row input:focus{border-color:var(--accent)}
+.guess-input-row input::placeholder{color:var(--text-dim)}
+.guess-btn{padding:11px 20px;border-radius:var(--radius-sm);border:1px solid var(--accent);background:var(--accent);color:#000;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.guess-btn:hover{background:#f7d04a}
+.guess-btn:active{transform:scale(.97)}
+
+/* HINTS */
+.hints-row{display:flex;gap:6px;margin-bottom:.5rem}
+.hint-btn{flex:1;padding:7px 6px;border-radius:var(--radius-sm);border:1px solid var(--border-strong);background:var(--bg-elevated);color:var(--text-muted);font-family:'Inter',sans-serif;font-size:11.5px;font-weight:500;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:4px}
+.hint-btn:hover:not(:disabled){color:var(--text-primary);border-color:var(--accent)}
+.hint-btn:disabled{opacity:.4;cursor:default}
+.hint-btn.used{color:var(--accent);border-color:rgba(245,197,24,.3);background:var(--accent-dim)}
+.hint-icon{width:14px;height:14px;border-radius:50%;background:var(--border-strong);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
+.hint-reveal{font-size:13px;color:var(--text-muted);text-align:center;min-height:20px;padding-bottom:4px;line-height:1.5}
+.hint-reveal strong{color:var(--accent)}
+
+/* POST GAME */
+.post-game-btns{display:flex;gap:8px;margin-top:.9rem}
+.share-btn,.other-team-btn{flex:1;padding:12px;border-radius:var(--radius-sm);font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
+.share-btn{background:var(--bg-elevated);border:1px solid var(--border-strong);color:var(--text-primary)}
+.share-btn:hover{border-color:var(--white)}
+.other-team-btn{background:var(--accent);border:1px solid var(--accent);color:#000}
+.other-team-btn:hover{background:#f7d04a}
+
+/* ARCHIVE */
+.archive-header{margin-bottom:1.25rem}
+.archive-header h2{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.04em;color:var(--white)}
+.archive-header p{font-size:13px;color:var(--text-muted);margin-top:2px}
+.archive-grid{display:flex;flex-direction:column;gap:10px}
+.archive-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:space-between}
+.archive-card:hover{border-color:var(--border-strong);background:var(--bg-elevated)}
+.archive-card-left{flex:1}
+.archive-card-comp{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:3px}
+.archive-card-title{font-size:15px;font-weight:500;color:var(--text-primary);margin-bottom:2px}
+.archive-card-sub{font-size:12px;color:var(--text-muted)}
+.archive-card-arrow{color:var(--text-dim);font-size:18px;margin-left:12px}
+
+/* STATS */
+.stats-header{margin-bottom:1.25rem}
+.stats-header h2{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.04em;color:var(--white)}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1.5rem}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 8px;text-align:center}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--accent);line-height:1;margin-bottom:4px}
+.stat-lbl{font-size:11px;color:var(--text-muted);letter-spacing:.05em;text-transform:uppercase}
+.guess-dist{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1rem}
+.guess-dist h3{font-size:13px;font-weight:600;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.9rem}
+.dist-bar-wrap{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.dist-lbl{font-size:12px;color:var(--text-muted);width:28px;flex-shrink:0}
+.dist-bar-bg{flex:1;height:20px;background:var(--bg-elevated);border-radius:3px;overflow:hidden}
+.dist-bar{height:100%;background:var(--green-result);border-radius:3px;min-width:0;transition:width .5s ease}
+.dist-bar--miss{background:var(--red)}
+.dist-count{font-size:12px;color:var(--text-muted);width:20px;text-align:right;flex-shrink:0}
+.reset-btn{width:100%;padding:11px;border-radius:var(--radius-sm);border:1px solid var(--border-strong);background:transparent;color:var(--text-muted);font-family:'Inter',sans-serif;font-size:13px;cursor:pointer;transition:all .15s}
+.reset-btn:hover{color:var(--red);border-color:var(--red)}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(0);background:var(--white);color:#000;font-size:14px;font-weight:600;padding:10px 20px;border-radius:24px;box-shadow:0 4px 24px rgba(0,0,0,.4);z-index:999;animation:toast-in .25s ease,toast-out .25s ease 1.8s forwards}
+@keyframes toast-in{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes toast-out{from{opacity:1}to{opacity:0}}
+
+@media(max-width:400px){
+  .puzzle-title{font-size:22px}
+  .player-dot{width:44px}
+  .player-dot .shirt{width:30px;height:30px;font-size:10px}
+  .player-dot .pname{font-size:8.5px;max-width:52px}
+  .stat-num{font-size:26px}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="logo">
+      <span class="logo-main">MISSING</span><span class="logo-xi">XI</span>
+    </div>
+    <nav class="header-nav">
+      <button class="nav-btn active" data-view="game" onclick="setView('game')">Today</button>
+      <button class="nav-btn" data-view="archive" onclick="setView('archive')">Archive</button>
+      <button class="nav-btn" data-view="stats" onclick="setView('stats')">Stats</button>
+    </nav>
+  </div>
+</header>
+
+<!-- GAME -->
+<main id="view-game" class="view active">
+  <div class="puzzle-meta">
+    <div class="puzzle-badge" id="puzzle-badge">Puzzle #1</div>
+    <h1 class="puzzle-title" id="puzzle-title"></h1>
+    <p class="puzzle-sub" id="puzzle-sub"></p>
+    <p class="puzzle-result" id="puzzle-result"></p>
+  </div>
+  <div class="team-tabs" id="team-tabs">
+    <button class="team-tab active" id="tab-a" onclick="setTeam('a')"></button>
+    <button class="team-tab" id="tab-b" onclick="setTeam('b')"></button>
+  </div>
+  <div class="pitch-container">
+    <div class="pitch" id="pitch">
+      <svg class="pitch-svg" viewBox="0 0 100 130" preserveAspectRatio="none">
+        <rect width="100" height="130" fill="#2d8c45"/>
+        <rect x="0" y="0" width="100" height="13" fill="#2a8040"/>
+        <rect x="0" y="26" width="100" height="13" fill="#2a8040"/>
+        <rect x="0" y="52" width="100" height="13" fill="#2a8040"/>
+        <rect x="0" y="78" width="100" height="13" fill="#2a8040"/>
+        <rect x="0" y="104" width="100" height="13" fill="#2a8040"/>
+        <rect x="5" y="3" width="90" height="124" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="0.5"/>
+        <line x1="5" y1="65" x2="95" y2="65" stroke="rgba(255,255,255,0.5)" stroke-width="0.5"/>
+        <circle cx="50" cy="65" r="9.15" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="0.5"/>
+        <circle cx="50" cy="65" r="0.8" fill="rgba(255,255,255,0.5)"/>
+        <rect x="21.1" y="3" width="57.8" height="18.3" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="0.5"/>
+        <rect x="32.1" y="3" width="35.8" height="5.5" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="0.5"/>
+        <circle cx="50" cy="21" r="7" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="0.4" stroke-dasharray="2,1.5"/>
+        <rect x="21.1" y="108.7" width="57.8" height="18.3" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="0.5"/>
+        <rect x="32.1" y="121.5" width="35.8" height="5.5" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="0.5"/>
+        <circle cx="50" cy="109" r="7" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="0.4" stroke-dasharray="2,1.5"/>
+        <circle cx="50" cy="14" r="0.8" fill="rgba(255,255,255,0.5)"/>
+        <circle cx="50" cy="116" r="0.8" fill="rgba(255,255,255,0.5)"/>
+      </svg>
+      <div class="players-layer" id="players-layer"></div>
+    </div>
+  </div>
+  <p class="formation-label" id="formation-label"></p>
+  <div class="guess-area" id="guess-area">
+    <div class="attempts-track" id="attempts-track">
+      <div class="attempt-pip" id="pip-0"></div>
+      <div class="attempt-pip" id="pip-1"></div>
+      <div class="attempt-pip" id="pip-2"></div>
+    </div>
+    <div id="result-banner"></div>
+    <div class="guess-input-row" id="guess-input-row">
+      <input type="text" id="guess-input" placeholder="Type the missing player's name…" autocomplete="off" autocorrect="off" spellcheck="false"/>
+      <button class="guess-btn" onclick="submitGuess()">Guess</button>
+    </div>
+    <div class="hints-row">
+      <button class="hint-btn" id="hint-btn-0" onclick="revealHint(0)"><span class="hint-icon">?</span> Position</button>
+      <button class="hint-btn" id="hint-btn-1" onclick="revealHint(1)"><span class="hint-icon">?</span> Nationality</button>
+      <button class="hint-btn" id="hint-btn-2" onclick="revealHint(2)"><span class="hint-icon">?</span> Clue</button>
+    </div>
+    <div class="hint-reveal" id="hint-reveal"></div>
+  </div>
+  <div class="post-game-btns" id="post-game-btns" style="display:none">
+    <button class="share-btn" onclick="shareResult()">Share Result</button>
+    <button class="other-team-btn" id="other-team-btn" onclick="switchToOtherTeam()">Try Other Team ›</button>
+  </div>
+</main>
+
+<!-- ARCHIVE -->
+<main id="view-archive" class="view">
+  <div class="archive-header">
+    <h2>Archive</h2>
+    <p>All available puzzles — play any lineup</p>
+  </div>
+  <div class="archive-grid" id="archive-grid"></div>
+</main>
+
+<!-- STATS -->
+<main id="view-stats" class="view">
+  <div class="stats-header"><h2>Your Stats</h2></div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-num" id="stat-played">0</div><div class="stat-lbl">Played</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-wins">0</div><div class="stat-lbl">Correct</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-streak">0</div><div class="stat-lbl">Streak</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-pct">0%</div><div class="stat-lbl">Win %</div></div>
+  </div>
+  <div class="guess-dist" id="guess-dist">
+    <h3>Guess distribution</h3>
+    <div class="dist-bar-wrap"><span class="dist-lbl">1st</span><div class="dist-bar-bg"><div class="dist-bar" id="dist-1"></div></div><span class="dist-count" id="dist-1-n">0</span></div>
+    <div class="dist-bar-wrap"><span class="dist-lbl">2nd</span><div class="dist-bar-bg"><div class="dist-bar" id="dist-2"></div></div><span class="dist-count" id="dist-2-n">0</span></div>
+    <div class="dist-bar-wrap"><span class="dist-lbl">3rd</span><div class="dist-bar-bg"><div class="dist-bar" id="dist-3"></div></div><span class="dist-count" id="dist-3-n">0</span></div>
+    <div class="dist-bar-wrap"><span class="dist-lbl">Miss</span><div class="dist-bar-bg"><div class="dist-bar dist-bar--miss" id="dist-miss"></div></div><span class="dist-count" id="dist-miss-n">0</span></div>
+  </div>
+  <button class="reset-btn" onclick="resetStats()">Reset Stats</button>
+</main>
+
+<script>
+// ═══════════════════════════════════════════════════
+// PUZZLE DATA
+// ═══════════════════════════════════════════════════
+const PUZZLES = [
+  {
+    id:1, competition:"UEFA Champions League Final", match:"Liverpool vs AC Milan",
+    venue:"Atatürk Olympic Stadium, Istanbul", date:"25 May 2005",
+    result:"3–3 AET (Liverpool won 3–2 on penalties)",
+    teamA:{
+      name:"Liverpool", formation:"4-4-1-1", color:"#C8102E", secondaryColor:"#ffffff",
+      missingIndex:10, answer:"Luis García",
+      acceptedAnswers:["luis garcia","luis garcía","garcia","garcía"],
+      hints:["Right midfielder","Spanish","L. García — scored the 'ghost goal' vs Chelsea in the semis"],
+      players:[
+        {name:"Dudek",pos:[50,8],role:"GK"},{name:"Finnan",pos:[82,26],role:"RB"},
+        {name:"Hyypiä",pos:[62,26],role:"CB"},{name:"Carragher",pos:[38,26],role:"CB"},
+        {name:"Traorè",pos:[18,26],role:"LB"},{name:"Gerrard",pos:[65,46],role:"CM"},
+        {name:"Alonso",pos:[35,46],role:"CM"},{name:"Riise",pos:[18,60],role:"LM"},
+        {name:"Kewell",pos:[50,62],role:"AM"},{name:"Baroš",pos:[50,76],role:"ST"},
+        {name:"???",pos:[82,60],role:"RM"}
+      ]
+    },
+    teamB:{
+      name:"AC Milan", formation:"4-4-2 diamond", color:"#000000", secondaryColor:"#c4171c",
+      missingIndex:8, answer:"Seedorf",
+      acceptedAnswers:["seedorf","clarence seedorf"],
+      hints:["Left midfielder","Dutch","C. Seedorf — won the CL with 3 different clubs"],
+      players:[
+        {name:"Dida",pos:[50,8],role:"GK"},{name:"Cafu",pos:[82,26],role:"RB"},
+        {name:"Stam",pos:[62,26],role:"CB"},{name:"Nesta",pos:[38,26],role:"CB"},
+        {name:"Maldini",pos:[18,26],role:"LB"},{name:"Gattuso",pos:[62,46],role:"CM"},
+        {name:"Pirlo",pos:[38,46],role:"CM"},{name:"Kaká",pos:[50,60],role:"AM"},
+        {name:"???",pos:[18,46],role:"LM"},
+        {name:"Shevchenko",pos:[62,76],role:"ST"},{name:"Crespo",pos:[38,76],role:"ST"}
+      ]
+    }
+  },
+  {
+    id:2, competition:"UEFA Euro 2008 Final", match:"Germany vs Spain",
+    venue:"Ernst-Happel-Stadion, Vienna", date:"29 June 2008",
+    result:"Germany 0–1 Spain",
+    teamA:{
+      name:"Germany", formation:"4-2-3-1", color:"#ffffff", secondaryColor:"#000000",
+      missingIndex:6, answer:"Hitzlsperger",
+      acceptedAnswers:["hitzlsperger","thomas hitzlsperger"],
+      hints:["Central / defensive midfielder","German","T. Hitzlsperger — known as 'The Hammer' for his thunderous shots"],
+      players:[
+        {name:"Lehmann",pos:[50,8],role:"GK"},{name:"Friedrich",pos:[82,26],role:"RB"},
+        {name:"Mertesacker",pos:[62,26],role:"CB"},{name:"Metzelder",pos:[38,26],role:"CB"},
+        {name:"Lahm",pos:[18,26],role:"LB"},{name:"Frings",pos:[62,44],role:"CDM"},
+        {name:"???",pos:[38,44],role:"CDM"},
+        {name:"Schweinsteiger",pos:[18,60],role:"LM"},{name:"Ballack",pos:[50,60],role:"AM"},
+        {name:"Podolski",pos:[82,60],role:"RM"},{name:"Klose",pos:[50,76],role:"ST"}
+      ]
+    },
+    teamB:{
+      name:"Spain", formation:"4-1-4-1", color:"#c60b1e", secondaryColor:"#ffc400",
+      missingIndex:5, answer:"Senna",
+      acceptedAnswers:["senna","marcos senna"],
+      hints:["Defensive midfielder (holding role)","Spanish (born Brazilian)","M. Senna — the unsung hero of Spain's 2008 triumph"],
+      players:[
+        {name:"Casillas",pos:[50,8],role:"GK"},{name:"Ramos",pos:[82,26],role:"RB"},
+        {name:"Marchena",pos:[62,26],role:"CB"},{name:"Puyol",pos:[38,26],role:"CB"},
+        {name:"Capdevila",pos:[18,26],role:"LB"},{name:"???",pos:[50,44],role:"CDM"},
+        {name:"Silva",pos:[18,60],role:"LM"},{name:"Xavi",pos:[38,60],role:"CM"},
+        {name:"Fàbregas",pos:[62,60],role:"CM"},{name:"Iniesta",pos:[82,60],role:"RM"},
+        {name:"Torres",pos:[50,76],role:"ST"}
+      ]
+    }
+  },
+  {
+    id:3, competition:"2010 FIFA World Cup Final", match:"Netherlands vs Spain",
+    venue:"Soccer City, Johannesburg", date:"11 July 2010",
+    result:"Netherlands 0–1 Spain (AET)",
+    teamA:{
+      name:"Netherlands", formation:"4-2-3-1", color:"#ff6600", secondaryColor:"#ffffff",
+      missingIndex:5, answer:"Van Bommel",
+      acceptedAnswers:["van bommel","mark van bommel"],
+      hints:["Defensive midfielder","Dutch","M. van Bommel — Netherlands captain, notorious for his combative style"],
+      players:[
+        {name:"Stekelenburg",pos:[50,8],role:"GK"},{name:"Van der Wiel",pos:[82,26],role:"RB"},
+        {name:"Heitinga",pos:[62,26],role:"CB"},{name:"Mathijsen",pos:[38,26],role:"CB"},
+        {name:"Van Bronckhorst",pos:[18,26],role:"LB"},{name:"???",pos:[62,44],role:"CDM"},
+        {name:"De Jong",pos:[38,44],role:"CDM"},{name:"Robben",pos:[82,60],role:"RW"},
+        {name:"Sneijder",pos:[50,60],role:"AM"},{name:"Kuyt",pos:[18,60],role:"LW"},
+        {name:"Van Persie",pos:[50,76],role:"ST"}
+      ]
+    },
+    teamB:{
+      name:"Spain", formation:"4-2-3-1", color:"#c60b1e", secondaryColor:"#ffc400",
+      missingIndex:7, answer:"Pedro",
+      acceptedAnswers:["pedro","pedro rodríguez","pedro rodriguez"],
+      hints:["Right winger","Spanish","Pedro — the only player to score in every group game at the 2010 World Cup"],
+      players:[
+        {name:"Casillas",pos:[50,8],role:"GK"},{name:"Ramos",pos:[82,26],role:"RB"},
+        {name:"Piqué",pos:[62,26],role:"CB"},{name:"Puyol",pos:[38,26],role:"CB"},
+        {name:"Capdevila",pos:[18,26],role:"LB"},{name:"Xabi Alonso",pos:[62,44],role:"CDM"},
+        {name:"Busquets",pos:[38,44],role:"CDM"},{name:"???",pos:[82,60],role:"RW"},
+        {name:"Xavi",pos:[50,60],role:"AM"},{name:"Iniesta",pos:[18,60],role:"LW"},
+        {name:"Villa",pos:[50,76],role:"ST"}
+      ]
+    }
+  },
+  {
+    id:4, competition:"UEFA Euro 2012 Final", match:"Spain vs Italy",
+    venue:"NSC Olimpiyskiy, Kyiv", date:"1 July 2012",
+    result:"Spain 4–0 Italy",
+    teamA:{
+      name:"Spain", formation:"4-2-3-1", color:"#c60b1e", secondaryColor:"#ffc400",
+      missingIndex:4, answer:"Jordi Alba",
+      acceptedAnswers:["jordi alba","alba"],
+      hints:["Left back","Spanish","J. Alba — scored Spain's second goal in this very final"],
+      players:[
+        {name:"Casillas",pos:[50,8],role:"GK"},{name:"Arbeloa",pos:[82,26],role:"RB"},
+        {name:"Piqué",pos:[62,26],role:"CB"},{name:"Ramos",pos:[38,26],role:"CB"},
+        {name:"???",pos:[18,26],role:"LB"},{name:"Xabi Alonso",pos:[62,44],role:"CDM"},
+        {name:"Busquets",pos:[38,44],role:"CDM"},{name:"Silva",pos:[18,60],role:"LM"},
+        {name:"Xavi",pos:[50,60],role:"AM"},{name:"Fàbregas",pos:[82,60],role:"RM"},
+        {name:"Iniesta",pos:[50,76],role:"AM"}
+      ]
+    },
+    teamB:{
+      name:"Italy", formation:"4-3-1-2", color:"#003d7a", secondaryColor:"#ffffff",
+      missingIndex:7, answer:"Marchisio",
+      acceptedAnswers:["marchisio","claudio marchisio"],
+      hints:["Central midfielder","Italian","C. Marchisio — Juventus midfielder, central to Italy's 2012 run"],
+      players:[
+        {name:"Buffon",pos:[50,8],role:"GK"},{name:"Abate",pos:[82,26],role:"RB"},
+        {name:"Bonucci",pos:[62,26],role:"CB"},{name:"Barzagli",pos:[38,26],role:"CB"},
+        {name:"Chiellini",pos:[18,26],role:"LB"},{name:"De Rossi",pos:[62,44],role:"CM"},
+        {name:"Montolivo",pos:[38,44],role:"CM"},{name:"???",pos:[50,44],role:"CM"},
+        {name:"Pirlo",pos:[50,60],role:"AM"},{name:"Cassano",pos:[62,76],role:"ST"},
+        {name:"Balotelli",pos:[38,76],role:"ST"}
+      ]
+    }
+  },
+  {
+    id:5, competition:"UEFA Champions League Final", match:"Tottenham vs Liverpool",
+    venue:"Wanda Metropolitano, Madrid", date:"1 June 2019",
+    result:"Tottenham 0–2 Liverpool",
+    teamA:{
+      name:"Tottenham", formation:"4-2-3-1", color:"#132257", secondaryColor:"#ffffff",
+      missingIndex:9, answer:"Son Heung-min",
+      acceptedAnswers:["son","son heung-min","heung-min son","son heung min"],
+      hints:["Left winger","South Korean","Son Heung-min — Spurs' joint top scorer that season alongside Kane"],
+      players:[
+        {name:"Lloris",pos:[50,8],role:"GK"},{name:"Trippier",pos:[82,26],role:"RB"},
+        {name:"Alderweireld",pos:[62,26],role:"CB"},{name:"Vertonghen",pos:[38,26],role:"CB"},
+        {name:"Rose",pos:[18,26],role:"LB"},{name:"Sissoko",pos:[62,44],role:"CDM"},
+        {name:"Winks",pos:[38,44],role:"CDM"},{name:"Eriksen",pos:[82,60],role:"RW"},
+        {name:"Alli",pos:[50,60],role:"AM"},{name:"???",pos:[18,60],role:"LW"},
+        {name:"Kane",pos:[50,76],role:"ST"}
+      ]
+    },
+    teamB:{
+      name:"Liverpool", formation:"4-3-3", color:"#C8102E", secondaryColor:"#ffffff",
+      missingIndex:6, answer:"Wijnaldum",
+      acceptedAnswers:["wijnaldum","georginio wijnaldum","gini wijnaldum"],
+      hints:["Central midfielder","Dutch","G. Wijnaldum — came off the bench to score twice vs Barcelona in the semis"],
+      players:[
+        {name:"Alisson",pos:[50,8],role:"GK"},{name:"Alexander-Arnold",pos:[82,26],role:"RB"},
+        {name:"Matip",pos:[62,26],role:"CB"},{name:"Van Dijk",pos:[38,26],role:"CB"},
+        {name:"Robertson",pos:[18,26],role:"LB"},{name:"Henderson",pos:[62,44],role:"CM"},
+        {name:"???",pos:[50,44],role:"CM"},{name:"Fabinho",pos:[38,44],role:"CDM"},
+        {name:"Salah",pos:[82,60],role:"RW"},{name:"Firmino",pos:[50,60],role:"CF"},
+        {name:"Mané",pos:[18,60],role:"LW"}
+      ]
+    }
+  },
+  {
+    id:6, competition:"2022 FIFA World Cup Final", match:"Argentina vs France",
+    venue:"Lusail Stadium, Qatar", date:"18 December 2022",
+    result:"Argentina 3–3 France AET (Argentina won 4–2 on pens)",
+    teamA:{
+      name:"Argentina", formation:"4-3-3", color:"#74acdf", secondaryColor:"#ffffff",
+      missingIndex:4, answer:"Tagliafico",
+      acceptedAnswers:["tagliafico","nicolas tagliafico","nicolás tagliafico"],
+      hints:["Left back","Argentine","N. Tagliafico — deputised at LB after Acuña was ruled out injured"],
+      players:[
+        {name:"E. Martínez",pos:[50,8],role:"GK"},{name:"Molina",pos:[82,26],role:"RB"},
+        {name:"Romero",pos:[62,26],role:"CB"},{name:"Otamendi",pos:[38,26],role:"CB"},
+        {name:"???",pos:[18,26],role:"LB"},{name:"De Paul",pos:[62,44],role:"CM"},
+        {name:"Fernández",pos:[50,44],role:"CM"},{name:"Mac Allister",pos:[38,44],role:"CM"},
+        {name:"Di María",pos:[82,60],role:"RW"},{name:"Messi",pos:[50,60],role:"CF"},
+        {name:"Álvarez",pos:[18,60],role:"LW"}
+      ]
+    },
+    teamB:{
+      name:"France", formation:"4-2-3-1", color:"#002395", secondaryColor:"#ffffff",
+      missingIndex:7, answer:"Dembélé",
+      acceptedAnswers:["dembele","dembélé","ousmane dembele","ousmane dembélé"],
+      hints:["Right winger","French","O. Dembélé — caused constant danger down France's right flank"],
+      players:[
+        {name:"Lloris",pos:[50,8],role:"GK"},{name:"Koundé",pos:[82,26],role:"RB"},
+        {name:"Varane",pos:[62,26],role:"CB"},{name:"Upamecano",pos:[38,26],role:"CB"},
+        {name:"T. Hernández",pos:[18,26],role:"LB"},{name:"Tchouaméni",pos:[62,44],role:"CDM"},
+        {name:"Rabiot",pos:[38,44],role:"CDM"},{name:"???",pos:[82,60],role:"RW"},
+        {name:"Griezmann",pos:[50,60],role:"AM"},{name:"Mbappé",pos:[18,60],role:"LW"},
+        {name:"Giroud",pos:[50,76],role:"ST"}
+      ]
+    }
+  }
+];
+
+// ═══════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════
+function getDailyPuzzleIndex(){
+  const start=new Date("2025-01-01");
+  const dayNum=Math.floor((new Date()-start)/86400000);
+  return dayNum%PUZZLES.length;
+}
+function normaliseAnswer(s){
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9\s]/g,"").trim();
+}
+function checkGuess(guess,team){
+  const g=normaliseAnswer(guess);
+  return team.acceptedAnswers.some(a=>normaliseAnswer(a)===g);
+}
+
+// ═══════════════════════════════════════════════════
+// STATE & STORAGE
+// ═══════════════════════════════════════════════════
+let state={puzzleIndex:0,teamKey:'a',attempts:0,maxAttempts:3,solved:false,failed:false,hintsUsed:[]};
+
+function loadStorage(){
+  try{const r=localStorage.getItem('missingxi_v1');return r?JSON.parse(r):{stats:defaultStats(),sessions:{}};}
+  catch{return{stats:defaultStats(),sessions:{}};}
+}
+function saveStorage(d){try{localStorage.setItem('missingxi_v1',JSON.stringify(d));}catch{}}
+function defaultStats(){return{played:0,wins:0,streak:0,bestStreak:0,dist:{1:0,2:0,3:0,miss:0}};}
+let storage=loadStorage();
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  state.puzzleIndex=getDailyPuzzleIndex();
+  loadPuzzle(state.puzzleIndex,'a');
+  renderArchive();
+  renderStats();
+  document.getElementById('guess-input').addEventListener('keydown',e=>{if(e.key==='Enter')submitGuess();});
+});
+
+// ═══════════════════════════════════════════════════
+// PUZZLE LOADING
+// ═══════════════════════════════════════════════════
+function loadPuzzle(idx,teamKey){
+  state.puzzleIndex=idx; state.teamKey=teamKey;
+  state.attempts=0; state.solved=false; state.failed=false; state.hintsUsed=[];
+
+  const puzzle=PUZZLES[idx];
+  const team=teamKey==='a'?puzzle.teamA:puzzle.teamB;
+  const sessionKey=`p${idx}_${teamKey}`;
+  const saved=storage.sessions[sessionKey];
+
+  document.getElementById('puzzle-badge').textContent=`Puzzle #${idx+1}`;
+  document.getElementById('puzzle-title').textContent=puzzle.competition;
+  document.getElementById('puzzle-sub').textContent=`${puzzle.match} · ${puzzle.venue} · ${puzzle.date}`;
+  document.getElementById('puzzle-result').textContent=puzzle.result;
+  document.getElementById('formation-label').textContent=`${team.name} — ${team.formation}`;
+  document.getElementById('tab-a').textContent=puzzle.teamA.name;
+  document.getElementById('tab-b').textContent=puzzle.teamB.name;
+  document.getElementById('tab-a').classList.toggle('active',teamKey==='a');
+  document.getElementById('tab-b').classList.toggle('active',teamKey==='b');
+
+  if(saved){
+    state.attempts=saved.attempts; state.solved=saved.solved; state.failed=saved.failed;
+    state.hintsUsed=saved.hintsUsed||[];
+    state.hintsUsed.forEach(h=>markHintUsed(h));
+    if(saved.hintTexts) document.getElementById('hint-reveal').innerHTML=saved.hintTexts;
+    (saved.pips||[]).forEach((pip,i)=>{const el=document.getElementById(`pip-${i}`);if(el&&pip)el.classList.add(pip);});
+    if(state.solved||state.failed) showEndState(state.solved,team);
+  } else {
+    resetPips();
+    document.getElementById('result-banner').innerHTML='';
+    document.getElementById('hint-reveal').innerHTML='';
+    resetHintButtons();
+    document.getElementById('guess-input-row').style.display='flex';
+    document.getElementById('post-game-btns').style.display='none';
+    document.getElementById('guess-input').value='';
+  }
+  renderPitch(idx,teamKey);
+}
+
+// ═══════════════════════════════════════════════════
+// PITCH
+// ═══════════════════════════════════════════════════
+function renderPitch(idx,teamKey){
+  const team=(teamKey==='a'?PUZZLES[idx].teamA:PUZZLES[idx].teamB);
+  const layer=document.getElementById('players-layer');
+  layer.innerHTML='';
+  team.players.forEach((p,i)=>{
+    const isMissing=(i===team.missingIndex);
+    const isCorrect=isMissing&&state.solved;
+    const isWrong=isMissing&&state.failed;
+    const dot=document.createElement('div');
+    dot.className='player-dot'+(isMissing&&!state.solved&&!state.failed?' missing':'')+(isCorrect?' correct':'')+(isWrong?' wrong':'');
+    dot.style.left=p.pos[0]+'%';
+    dot.style.top=p.pos[1]+'%';
+    const shirt=document.createElement('div');
+    shirt.className='shirt';
+    if(isMissing){
+      if(state.solved){shirt.style.background=team.color;shirt.style.color=team.secondaryColor;shirt.textContent='✓';}
+      else if(state.failed){shirt.style.background='var(--red)';shirt.style.color='#fff';shirt.textContent='✗';}
+      else{shirt.textContent='?';}
+    } else {
+      shirt.style.background=team.color;
+      shirt.style.color=team.secondaryColor||'#fff';
+      shirt.textContent=i+1;
+    }
+    const name=document.createElement('div');
+    name.className='pname';
+    if(isMissing&&!state.solved&&!state.failed) name.textContent=p.role||'?';
+    else if(isMissing) name.textContent=team.answer;
+    else name.textContent=p.name;
+    dot.appendChild(shirt);
+    dot.appendChild(name);
+    layer.appendChild(dot);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// GUESSING
+// ═══════════════════════════════════════════════════
+function submitGuess(){
+  if(state.solved||state.failed) return;
+  const input=document.getElementById('guess-input');
+  const val=input.value.trim();
+  if(!val){input.focus();return;}
+  const puzzle=PUZZLES[state.puzzleIndex];
+  const team=state.teamKey==='a'?puzzle.teamA:puzzle.teamB;
+  const correct=checkGuess(val,team);
+  const pip=document.getElementById(`pip-${state.attempts}`);
+  if(correct){
+    pip.classList.add('correct');
+    state.solved=true;
+    recordResult(true,state.attempts+1);
+    showEndState(true,team);
+    renderPitch(state.puzzleIndex,state.teamKey);
+    saveSession({pips:getPipStates(),solved:true,failed:false});
+  } else {
+    pip.classList.add('wrong');
+    state.attempts++;
+    if(state.attempts>=state.maxAttempts){
+      state.failed=true;
+      recordResult(false,0);
+      showEndState(false,team);
+      renderPitch(state.puzzleIndex,state.teamKey);
+      saveSession({pips:getPipStates(),solved:false,failed:true});
+    } else {
+      const left=state.maxAttempts-state.attempts;
+      showBanner(`Not quite — ${left} attempt${left===1?'':'s'} left`,'try-again');
+    }
+  }
+  input.value='';
+  renderStats();
+}
+
+function getPipStates(){
+  return[0,1,2].map(i=>{
+    const el=document.getElementById(`pip-${i}`);
+    if(el.classList.contains('correct'))return'correct';
+    if(el.classList.contains('wrong'))return'wrong';
+    return null;
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// HINTS
+// ═══════════════════════════════════════════════════
+function revealHint(n){
+  if(state.solved||state.failed||state.hintsUsed.includes(n))return;
+  const team=state.teamKey==='a'?PUZZLES[state.puzzleIndex].teamA:PUZZLES[state.puzzleIndex].teamB;
+  state.hintsUsed.push(n);
+  markHintUsed(n);
+  const labels=['Position','Nationality','Clue'];
+  const el=document.getElementById('hint-reveal');
+  const sep=el.innerHTML?'<br>':'';
+  el.innerHTML=el.innerHTML+sep+`<strong>${labels[n]}:</strong> ${team.hints[n]}`;
+  saveSession({hintsUsed:state.hintsUsed,hintTexts:el.innerHTML});
+}
+function markHintUsed(n){const b=document.getElementById(`hint-btn-${n}`);if(b){b.classList.add('used');b.disabled=true;}}
+function resetHintButtons(){[0,1,2].forEach(n=>{const b=document.getElementById(`hint-btn-${n}`);if(b){b.classList.remove('used');b.disabled=false;}});}
+
+// ═══════════════════════════════════════════════════
+// END STATE
+// ═══════════════════════════════════════════════════
+function showEndState(won,team){
+  if(won) showBanner(`Correct! The missing player was <strong>${team.answer}</strong>`,'success');
+  else showBanner(`The answer was <strong>${team.answer}</strong>`,'fail');
+  document.getElementById('guess-input-row').style.display='none';
+  document.getElementById('post-game-btns').style.display='flex';
+  document.getElementById('other-team-btn').style.display=state.teamKey==='a'?'block':'none';
+}
+function showBanner(html,type){
+  document.getElementById('result-banner').innerHTML=`<div class="result-msg ${type}">${html}</div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════
+function setTeam(key){if(key!==state.teamKey)loadPuzzle(state.puzzleIndex,key);}
+function switchToOtherTeam(){setTeam(state.teamKey==='a'?'b':'a');}
+function setView(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`view-${view}`).classList.add('active');
+  document.querySelector(`[data-view="${view}"]`).classList.add('active');
+  if(view==='stats')renderStats();
+}
+
+// ═══════════════════════════════════════════════════
+// ARCHIVE
+// ═══════════════════════════════════════════════════
+function renderArchive(){
+  const grid=document.getElementById('archive-grid');
+  grid.innerHTML='';
+  PUZZLES.forEach((puzzle,idx)=>{
+    const card=document.createElement('div');
+    card.className='archive-card';
+    card.innerHTML=`
+      <div class="archive-card-left">
+        <div class="archive-card-comp">${puzzle.competition}</div>
+        <div class="archive-card-title">${puzzle.match}</div>
+        <div class="archive-card-sub">${puzzle.date} · ${puzzle.result}</div>
+      </div>
+      <div class="archive-card-arrow">›</div>`;
+    card.addEventListener('click',()=>{loadPuzzle(idx,'a');setView('game');});
+    grid.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════════════
+function renderStats(){
+  const s=storage.stats;
+  document.getElementById('stat-played').textContent=s.played;
+  document.getElementById('stat-wins').textContent=s.wins;
+  document.getElementById('stat-streak').textContent=s.streak;
+  document.getElementById('stat-pct').textContent=s.played?Math.round(s.wins/s.played*100)+'%':'0%';
+  const max=Math.max(1,s.dist[1],s.dist[2],s.dist[3],s.dist.miss);
+  ['1','2','3'].forEach(k=>{
+    document.getElementById(`dist-${k}`).style.width=(s.dist[k]||0)/max*100+'%';
+    document.getElementById(`dist-${k}-n`).textContent=s.dist[k]||0;
+  });
+  document.getElementById('dist-miss').style.width=(s.dist.miss||0)/max*100+'%';
+  document.getElementById('dist-miss-n').textContent=s.dist.miss||0;
+}
+function recordResult(won,guessNum){
+  const s=storage.stats; s.played++;
+  if(won){s.wins++;s.streak++;if(s.streak>(s.bestStreak||0))s.bestStreak=s.streak;if(guessNum>=1&&guessNum<=3)s.dist[guessNum]=(s.dist[guessNum]||0)+1;}
+  else{s.streak=0;s.dist.miss=(s.dist.miss||0)+1;}
+  saveStorage(storage);
+}
+function resetStats(){
+  if(!confirm('Reset all stats? This cannot be undone.'))return;
+  storage.stats=defaultStats();saveStorage(storage);renderStats();
+}
+
+// ═══════════════════════════════════════════════════
+// SESSION
+// ═══════════════════════════════════════════════════
+function saveSession(extra){
+  const key=`p${state.puzzleIndex}_${state.teamKey}`;
+  storage.sessions[key]=Object.assign(storage.sessions[key]||{},{attempts:state.attempts,solved:state.solved,failed:state.failed},extra);
+  saveStorage(storage);
+}
+function resetPips(){[0,1,2].forEach(i=>{const p=document.getElementById(`pip-${i}`);if(p)p.classList.remove('correct','wrong');});}
+
+// ═══════════════════════════════════════════════════
+// SHARE
+// ═══════════════════════════════════════════════════
+function shareResult(){
+  const puzzle=PUZZLES[state.puzzleIndex];
+  const team=state.teamKey==='a'?puzzle.teamA:puzzle.teamB;
+  const squares=getPipStates().map(p=>p==='correct'?'🟢':p==='wrong'?'🔴':'⬜').join('');
+  const outcome=state.solved?`Got it in ${state.attempts+1}!`:`Missed it — it was ${team.answer}`;
+  const text=[`⚽ Missing XI — Puzzle #${state.puzzleIndex+1}`,puzzle.match,`${team.name}: ${outcome}`,squares,'missingxi.com'].join('\n');
+  if(navigator.clipboard){navigator.clipboard.writeText(text).then(showToast).catch(()=>fallbackCopy(text));}
+  else fallbackCopy(text);
+}
+function fallbackCopy(text){
+  const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();showToast();
+}
+function showToast(){
+  const t=document.createElement('div');t.className='toast';t.textContent='Copied to clipboard!';
+  document.body.appendChild(t);setTimeout(()=>t.remove(),2200);
+}
+</script>
+</body>
+</html>
